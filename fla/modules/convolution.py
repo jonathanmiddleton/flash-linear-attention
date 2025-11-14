@@ -414,7 +414,8 @@ def causal_conv1d_fwd(
     if x.shape[-1] != weight.shape[0]:
         x = rearrange(x, 'b t ... -> b t (...)')
     B, T, D, W = *x.shape, weight.shape[1]
-    BT = min(64, triton.next_power_of_2(triton.cdiv(max(16, B*T), get_multiprocessor_count(x.device.index))))
+    BT = min(64, 2 ** math.ceil(math.log2(math.ceil(max(16, B * T) / torch.cuda.get_device_properties(x.device.index).multi_processor_count))))
+    # BT = min(64, triton.next_power_of_2(triton.cdiv(max(16, B*T), get_multiprocessor_count(x.device.index))))
     BW = triton.next_power_of_2(W)
     if chunk_indices is None and cu_seqlens is not None:
         chunk_indices = prepare_chunk_indices(cu_seqlens, BT)
@@ -469,7 +470,8 @@ def causal_conv1d_bwd(
         x = rearrange(x, 'b t ... -> b t (...)')
     B, T, D = x.shape
     W = weight.shape[1] if weight is not None else None
-    BT = min(64, triton.next_power_of_2(triton.cdiv(max(16, B*T), get_multiprocessor_count(x.device.index))))
+    BT = min(64, 2 ** math.ceil(math.log2(math.ceil(max(16, B * T) / torch.cuda.get_device_properties(x.device.index).multi_processor_count))))
+    # BT = min(64, triton.next_power_of_2(triton.cdiv(max(16, B*T), get_multiprocessor_count(x.device.index))))
     BW = triton.next_power_of_2(W)
     if chunk_indices is None and cu_seqlens is not None:
         chunk_indices = prepare_chunk_indices(cu_seqlens, BT)
