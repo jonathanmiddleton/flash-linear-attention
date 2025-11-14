@@ -88,7 +88,7 @@ def causal_conv1d_fwd_kernel(
     b_y = tl.zeros((BT, BD), dtype=tl.float32)
     if not USE_INITIAL_STATE:
         for i_w in tl.static_range(-W + 1, 1):
-            p_yi = tl.make_block_ptr(x + bos * D, (T, D), (D, 1), (i_t * BT + i_w, i_d * BD), (BT, BD), (1, 0))
+            p_yi = tl.make_block_ptr(x + bos * D, [T, D], [D, 1], [i_t * BT + i_w, i_d * BD], [BT, BD], [1, 0])
             # [BT, BD]
             b_yi = tl.load(p_yi, boundary_check=(0, 1)).to(tl.float32)
             if HAS_WEIGHT:
@@ -97,7 +97,7 @@ def causal_conv1d_fwd_kernel(
     elif i_t * BT >= W:
         # to make Triton compiler happy, we need to copy codes
         for i_w in tl.static_range(-W + 1, 1):
-            p_yi = tl.make_block_ptr(x + bos * D, (T, D), (D, 1), (i_t * BT + i_w, i_d * BD), (BT, BD), (1, 0))
+            p_yi = tl.make_block_ptr(x + bos * D, [T, D], [D, 1], [i_t * BT + i_w, i_d * BD], [BT, BD], [1, 0])
             # [BT, BD]
             b_yi = tl.load(p_yi, boundary_check=(0, 1)).to(tl.float32)
             if HAS_WEIGHT:
@@ -125,11 +125,11 @@ def causal_conv1d_fwd_kernel(
         b_y = b_y * tl.sigmoid(b_y)
 
     if HAS_RESIDUAL:
-        p_residual = tl.make_block_ptr(residual + bos * D, (T, D), (D, 1), (i_t * BT, i_d * BD), (BT, BD), (1, 0))
+        p_residual = tl.make_block_ptr(residual + bos * D, [T, D], [D, 1], [i_t * BT, i_d * BD], [BT, BD], [1, 0])
         b_residual = tl.load(p_residual, boundary_check=(0, 1))
         b_y += b_residual
 
-    p_y = tl.make_block_ptr(y + bos * D, (T, D), (D, 1), (i_t * BT, i_d * BD), (BT, BD), (1, 0))
+    p_y = tl.make_block_ptr(y + bos * D, [T, D], [D, 1], [i_t * BT, i_d * BD], [BT, BD], [1, 0])
     tl.store(p_y, tl.cast(b_y, dtype=p_y.dtype.element_ty, fp_downcast_rounding='rtne'), boundary_check=(0, 1))
 
 
